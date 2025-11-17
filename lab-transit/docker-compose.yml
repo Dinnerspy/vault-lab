@@ -1,0 +1,54 @@
+services:
+  vault:
+    build:
+      context: ./server
+    container_name: lab-transit-vault
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-data:/vault/data
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD-SHELL", "vault status >/dev/null 2>&1; code=$$?; if [ $$code -eq 0 ] || [ $$code -eq 2 ]; then exit 0; else exit $$code; fi"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shell:
+    build:
+      context: ./shell
+    container_name: lab-transit-shell
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_CACERT: ""
+      VAULT_NAMESPACE: ""
+    volumes:
+      - ./shell/policies:/workspace/policies:ro
+
+  app:
+    build:
+      context: ./app
+    container_name: lab-transit-app
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      ROLE_ID_PATH: /vault-approle/role_id
+      SECRET_ID_PATH: /vault-approle/secret_id
+      TRANSIT_KEY: app-key
+    volumes:
+      - ./.local/approle:/vault-approle:ro
+      - ./app/data:/usr/src/app/data
+    ports:
+      - "5001:5000"
+
+volumes:
+  vault-data:

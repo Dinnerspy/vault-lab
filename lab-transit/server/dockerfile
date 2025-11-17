@@ -1,0 +1,11 @@
+FROM hashicorp/vault:latest
+
+USER root
+
+COPY vault.hcl /vault/config/vault.hcl
+COPY start-vault.sh /usr/local/bin/start-vault.sh
+
+RUN chmod +x /usr/local/bin/start-vault.sh
+
+ENTRYPOINT ["/usr/local/bin/start-vault.sh"]
+CMD ["server", "-config=/vault/config/vault.hcl"]

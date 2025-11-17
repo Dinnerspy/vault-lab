@@ -1,0 +1,64 @@
+services:
+  vault:
+    build:
+      context: ./server
+    container_name: lab-pki-vault
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    volumes:
+      - vault-data:/vault/data
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shell:
+    build:
+      context: ./shell
+    container_name: lab-pki-shell
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_CACERT: ""
+      VAULT_NAMESPACE: ""
+    volumes:
+      - ./shell/policies:/workspace/policies:ro
+
+  nginx-bot:
+    build:
+      context: ./nginx-bot
+    container_name: lab-pki-nginx-bot
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      ROLE_ID_PATH: /vault-approle/role_id
+      SECRET_ID_PATH: /vault-approle/secret_id
+      ROLE_NAME: web-role
+      CERT_DOMAIN: web.local
+      CERT_TTL: 1m
+      BOT_INTERVAL: "60"
+      PKI_MOUNT: pki
+      PKI_ROLE_NAME: web-role
+      PKI_COMMON_NAME: web.local
+      PKI_CERT_PATH: /etc/nginx/certs/cert.pem
+      PKI_KEY_PATH: /etc/nginx/certs/key.pem
+      PKI_CACHAIN_PATH: /etc/nginx/certs/ca.pem
+      CERT_INFO_PATH: /usr/share/nginx/html/cert-info.html
+      VAULTBOT_LOGFILE: /var/log/vaultbot.log
+    volumes:
+      - nginx-certs:/etc/nginx/certs
+      - ./.local/bot-approle:/vault-approle:ro
+    ports:
+      - "8080:80"
+      - "8443:443"
+
+volumes:
+  vault-data:
+  nginx-certs:

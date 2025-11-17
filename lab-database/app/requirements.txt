@@ -1,0 +1,3 @@
+Flask==3.0.0
+psycopg[binary]==3.2.12
+hvac==1.2.1

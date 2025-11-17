@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Vault PKI Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; background: #eef; color: #124; }
+    table { border-collapse: collapse; margin-top: 1rem; }
+    td { padding: 0.25rem 0.75rem; border-bottom: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Vault PKI + Nginx Bot Demo</h1>
+  <p>This page is served by Nginx. Certificates are issued by Vault and rotated automatically.</p>
+  <div class="badge">HTTPS ready once Vault Bot runs</div>
+  <section>
+    <h2>Current Certificate Details</h2>
+    <p>The Vault Bot writes the latest certificate details to <code>/usr/share/nginx/html/cert-info.html</code>.</p>
+    <iframe src="cert-info.html" width="100%" height="160" style="border:1px solid #ccc;"></iframe>
+  </section>
+</body>
+</html>

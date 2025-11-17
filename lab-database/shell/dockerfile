@@ -1,0 +1,30 @@
+FROM alpine:3.20
+
+ARG VAULT_VERSION=1.12.0
+
+RUN apk add --no-cache \
+        bash \
+        ca-certificates \
+        curl \
+        jq \
+        openssl \
+        postgresql-client \
+        unzip \
+        wget && \
+    wget "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip" -O /tmp/vault.zip && \
+    unzip /tmp/vault.zip -d /tmp && \
+    mv /tmp/vault /usr/local/bin/ && \
+    rm -rf /tmp/* && \
+    apk del --no-cache unzip wget && \
+    addgroup -S vault && adduser -S vault -G vault && \
+    mkdir -p /workspace && chown -R vault:vault /workspace
+
+USER vault
+
+ENV HOME=/workspace \
+    PATH="/usr/local/bin:${PATH}" \
+    VAULT_ADDR="http://vault:8200"
+
+WORKDIR /workspace
+
+CMD ["sleep", "infinity"]

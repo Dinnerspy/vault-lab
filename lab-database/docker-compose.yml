@@ -1,0 +1,83 @@
+services:
+  vault:
+    build:
+      context: ./server
+    container_name: lab-db-vault
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-data:/vault/data
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD-SHELL", "vault status >/dev/null 2>&1; code=$$?; if [ $$code -eq 0 ] || [ $$code -eq 2 ]; then exit 0; else exit $$code; fi"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    build:
+      context: ./postgres
+    container_name: lab-db-postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: appdb
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shell:
+    build:
+      context: ./shell
+    container_name: lab-db-shell
+    depends_on:
+      vault:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_CACERT: ""
+      VAULT_NAMESPACE: ""
+      PGHOST: postgres
+      PGUSER: root
+      PGPASSWORD: rootpassword
+      PGDATABASE: appdb
+    volumes:
+      - ./shell/policies:/workspace/policies:ro
+
+  app:
+    build:
+      context: ./app
+    container_name: lab-db-app
+    depends_on:
+      vault:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      ROLE_ID_PATH: /vault-approle/role_id
+      SECRET_ID_PATH: /vault-approle/secret_id
+      DB_HOST: postgres
+      DB_NAME: appdb
+      DB_PORT: "5432"
+    volumes:
+      - ./.local/approle:/vault-approle:ro
+    ports:
+      - "8080:5000"
+
+volumes:
+  vault-data:
+  postgres-data:

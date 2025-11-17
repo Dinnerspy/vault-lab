@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Vault Transit Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    form { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+    textarea, input[type="text"] { width: 100%; padding: 0.5rem; margin-top: 0.5rem; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; }
+    .alert { padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+    .alert.success { background: #e6ffed; border: 1px solid #34c759; }
+    .alert.error { background: #ffecec; border: 1px solid #ff3b30; }
+    .result { background: #f7f7f9; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem; font-family: monospace; }
+    h2 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <h1>Vault Transit Encryption-at-Rest Demo</h1>
+  <p>Secrets are encrypted with Vault's Transit engine before being written to disk. Stored ciphertext can be decrypted on demand via AppRole authentication.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <section>
+    <h2>Encrypt & Store Secret</h2>
+    <form method="post">
+      <input type="hidden" name="action" value="encrypt" />
+      <label for="plaintext">Plaintext</label>
+      <textarea id="plaintext" name="plaintext" rows="4" placeholder="Type something confidential...">{{ plaintext_value }}</textarea>
+      <button type="submit">Encrypt and Save</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Stored Ciphertexts</h2>
+    {% if records %}
+      <table>
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Ciphertext</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+            <tr{% if selected_record_id == record.id %} class="active"{% endif %}>
+              <td>{{ record.created_at }}</td>
+              <td><div class="result">{{ record.ciphertext }}</div></td>
+              <td>
+                <form method="post">
+                  <input type="hidden" name="action" value="decrypt" />
+                  <input type="hidden" name="record_id" value="{{ record.id }}" />
+                  <button type="submit">Decrypt on Demand</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No encrypted records stored yet. Submit plaintext above to create one.</p>
+    {% endif %}
+  </section>
+
+  {% if decrypted_output %}
+    <section>
+      <h2>Decrypted Plaintext</h2>
+      <div class="result">{{ decrypted_output }}</div>
+    </section>
+  {% endif %}
+</body>
+</html>
