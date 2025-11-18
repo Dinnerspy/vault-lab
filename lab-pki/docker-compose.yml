@@ -38,8 +38,10 @@ services:
         condition: service_healthy
     environment:
       VAULT_ADDR: http://vault:8200
-      ROLE_ID_PATH: /vault-approle/role_id
-      SECRET_ID_PATH: /vault-approle/secret_id
+      VAULT_BOOTSTRAP_TOKEN: ${VAULT_BOOTSTRAP_TOKEN:-}
+      APPROLE_ROLE_NAME: vault-bot
+      ROLE_ID_PATH: /tmp/vault-approle/role_id
+      SECRET_ID_PATH: /tmp/vault-approle/secret_id
       ROLE_NAME: web-role
       CERT_DOMAIN: web.local
       CERT_TTL: 1m
@@ -54,7 +56,6 @@ services:
       VAULTBOT_LOGFILE: /var/log/vaultbot.log
     volumes:
       - nginx-certs:/etc/nginx/certs
-      - ./.local/bot-approle:/vault-approle:ro
     ports:
       - "8080:80"
       - "8443:443"
