@@ -10,7 +10,7 @@ services:
     ports:
       - "8200:8200"
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: ["CMD-SHELL", "vault status >/dev/null 2>&1; code=$$?; if [ $$code -eq 0 ] || [ $$code -eq 2 ]; then exit 0; else exit $$code; fi"]
       interval: 10s
       timeout: 5s
       retries: 10
