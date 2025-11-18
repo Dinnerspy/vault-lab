@@ -20,8 +20,8 @@ RUN curl -fsSL "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VA
     && rm /tmp/vault.zip \
     && chmod +x /usr/local/bin/vault
 
-# Download official Vaultbot binary release
-RUN curl -fsSL "https://github.com/soundcloud/vault-bot/releases/download/v${VAULTBOT_VERSION}/vaultbot_${VAULTBOT_VERSION}_linux_amd64.tar.gz" -o /tmp/vaultbot.tar.gz \
+# Download Vaultbot binary release from GitLab (correct source)
+RUN curl -fsSL "https://gitlab.com/msvechla/vaultbot/-/releases/v${VAULTBOT_VERSION}/downloads/vaultbot_${VAULTBOT_VERSION}_linux_amd64.tar.gz" -o /tmp/vaultbot.tar.gz \
     && tar -xf /tmp/vaultbot.tar.gz -C /usr/local/bin vaultbot \
     && rm /tmp/vaultbot.tar.gz \
     && chmod +x /usr/local/bin/vaultbot
