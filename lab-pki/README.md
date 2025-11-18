@@ -177,6 +177,23 @@ docker compose down -v
 
 Delete `.local/` if you no longer need stored keys/tokens.
 
+## Troubleshooting
+
+### nginx-bot Container Exits Immediately
+
+If the `nginx-bot` container fails to start with "Missing AppRole credentials", this is typically due to:
+
+1. **Expired secret_id** (2-minute TTL by design). Regenerate it:
+   ```bash
+   export VAULT_TOKEN=$(cat .local/root-token.txt)
+   docker compose exec -e VAULT_TOKEN shell vault write -f -field=secret_id auth/approle/role/vault-bot/secret-id > .local/bot-approle/secret_id
+   docker compose restart nginx-bot
+   ```
+
+2. **Windows Docker Desktop volume mount issue**: On Windows, bind mounts to `.local/bot-approle` may not work reliably. Workaround:
+   - Use WSL2 and run the lab from within WSL
+   - Or manually copy credentials into the container after it starts
+
 ## Useful Commands
 
 - Tail Vault logs:
