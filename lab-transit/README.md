@@ -72,9 +72,9 @@ vault policy write transit-app-policy /workspace/policies/transit-app-policy.hcl
 vault auth enable approle
 vault write auth/approle/role/transit-app \
   token_policies=transit-app-policy \
-  token_ttl=2m \
-  token_max_ttl=5m \
-  secret_id_ttl=2m
+  token_ttl=1h \
+  token_max_ttl=24h \
+  secret_id_ttl=24h
 
 vault read -field=role_id auth/approle/role/transit-app/role-id > /workspace/approle/role_id
 vault write -f -field=secret_id auth/approle/role/transit-app/secret-id > /workspace/approle/secret_id

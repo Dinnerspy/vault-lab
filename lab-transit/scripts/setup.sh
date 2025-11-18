@@ -62,9 +62,9 @@ fi
 
 vault write auth/approle/role/transit-app \
   token_policies=transit-app-policy \
-  token_ttl=2m \
-  token_max_ttl=5m \
-  secret_id_ttl=2m
+  token_ttl=1h \
+  token_max_ttl=24h \
+  secret_id_ttl=24h
 EOF
 
 log "Retrieving AppRole credentials for demo app..."

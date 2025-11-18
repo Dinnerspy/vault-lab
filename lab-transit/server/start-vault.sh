@@ -1,5 +1,12 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -e
 
-echo "[Vault] Starting with command: vault $*"
-exec vault "$@"
+mkdir -p /vault/data
+chown -R vault:vault /vault/data
+
+# Run Vault directly to avoid dev mode defaults
+if [ "$(id -u)" = '0' ]; then
+    exec su-exec vault vault "$@"
+else
+    exec vault "$@"
+fi

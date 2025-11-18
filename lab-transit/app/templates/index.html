@@ -2,22 +2,162 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vault Transit Demo</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; }
-    form { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; border-radius: 4px; }
-    textarea, input[type="text"] { width: 100%; padding: 0.5rem; margin-top: 0.5rem; }
-    button { padding: 0.5rem 1rem; font-size: 1rem; }
-    .alert { padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
-    .alert.success { background: #e6ffed; border: 1px solid #34c759; }
-    .alert.error { background: #ffecec; border: 1px solid #ff3b30; }
-    .result { background: #f7f7f9; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem; font-family: monospace; }
-    h2 { margin-top: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    header p {
+      opacity: 0.9;
+      font-size: 1rem;
+    }
+    .content { padding: 2rem; }
+    section {
+      margin-bottom: 2rem;
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+    section h2 {
+      color: #495057;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    form { margin-top: 1rem; }
+    label {
+      display: block;
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      transition: border-color 0.2s;
+    }
+    textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 1rem;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    button:active { transform: translateY(0); }
+    .alert {
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+    }
+    .alert.success {
+      background: #d1e7dd;
+      color: #0f5132;
+      border: 1px solid #badbcc;
+    }
+    .alert.error {
+      background: #f8d7da;
+      color: #842029;
+      border: 1px solid #f5c2c7;
+    }
+    .result {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-top: 0.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      border: 2px solid #e9ecef;
+      word-break: break-all;
+      color: #495057;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background: white;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    th {
+      background: #495057;
+      color: white;
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr.active { background: #e7f3ff; }
+    tr:hover { background: #f8f9fa; }
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #6c757d;
+    }
+    .icon { font-size: 1.2rem; }
   </style>
 </head>
 <body>
-  <h1>Vault Transit Encryption-at-Rest Demo</h1>
-  <p>Secrets are encrypted with Vault's Transit engine before being written to disk. Stored ciphertext can be decrypted on demand via AppRole authentication.</p>
+  <div class="container">
+    <header>
+      <h1><span class="icon">🔐</span> Vault Transit Encryption Demo</h1>
+      <p>Encrypt secrets with HashiCorp Vault's Transit engine • Decrypt on demand via AppRole</p>
+    </header>
+    <div class="content">
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -28,24 +168,24 @@
   {% endwith %}
 
   <section>
-    <h2>Encrypt & Store Secret</h2>
+    <h2><span class="icon">✏️</span> Encrypt & Store Secret</h2>
     <form method="post">
       <input type="hidden" name="action" value="encrypt" />
-      <label for="plaintext">Plaintext</label>
-      <textarea id="plaintext" name="plaintext" rows="4" placeholder="Type something confidential...">{{ plaintext_value }}</textarea>
-      <button type="submit">Encrypt and Save</button>
+      <label for="plaintext">Plaintext Secret</label>
+      <textarea id="plaintext" name="plaintext" rows="4" placeholder="Enter your confidential data here...">{{ plaintext_value }}</textarea>
+      <button type="submit">🔒 Encrypt and Save</button>
     </form>
   </section>
 
   <section>
-    <h2>Stored Ciphertexts</h2>
+    <h2><span class="icon">📦</span> Stored Ciphertexts</h2>
     {% if records %}
       <table>
         <thead>
           <tr>
-            <th>Created</th>
-            <th>Ciphertext</th>
-            <th>Action</th>
+            <th>Created At</th>
+            <th>Encrypted Ciphertext</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -54,10 +194,10 @@
               <td>{{ record.created_at }}</td>
               <td><div class="result">{{ record.ciphertext }}</div></td>
               <td>
-                <form method="post">
+                <form method="post" style="margin: 0;">
                   <input type="hidden" name="action" value="decrypt" />
                   <input type="hidden" name="record_id" value="{{ record.id }}" />
-                  <button type="submit">Decrypt on Demand</button>
+                  <button type="submit">🔓 Decrypt</button>
                 </form>
               </td>
             </tr>
@@ -65,15 +205,20 @@
         </tbody>
       </table>
     {% else %}
-      <p>No encrypted records stored yet. Submit plaintext above to create one.</p>
+      <div class="empty-state">
+        <p>📭 No encrypted records yet</p>
+        <p style="margin-top: 0.5rem; font-size: 0.9rem;">Submit plaintext above to create your first encrypted secret</p>
+      </div>
     {% endif %}
   </section>
 
   {% if decrypted_output %}
-    <section>
-      <h2>Decrypted Plaintext</h2>
-      <div class="result">{{ decrypted_output }}</div>
+    <section style="background: #e7f3ff; border-color: #b3d9ff;">
+      <h2><span class="icon">🔓</span> Decrypted Plaintext</h2>
+      <div class="result" style="background: #fff; border-color: #b3d9ff;">{{ decrypted_output }}</div>
     </section>
   {% endif %}
+    </div>
+  </div>
 </body>
 </html>
