@@ -130,6 +130,21 @@ Optionally delete the `.local/` directory to remove stored keys and tokens.
 
 Not applicable for this lab.
 
+## Troubleshooting
+
+### AppRole "invalid role or secret ID" Error
+
+If the demo app shows an AppRole authentication error, the `secret_id` may have expired (2-minute TTL by design). Regenerate it:
+
+```bash
+# From the lab-database directory
+export VAULT_TOKEN=$(cat .local/root-token.txt)
+docker compose exec -e VAULT_TOKEN shell vault write -f -field=secret_id auth/approle/role/db-app/secret-id > .local/approle/secret_id
+docker compose restart app
+```
+
+Or re-run the setup script to regenerate all credentials.
+
 ## Useful Commands
 
 - Check Vault status:
