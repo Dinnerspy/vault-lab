@@ -91,26 +91,22 @@ vault write pki/roles/web-role \
 
 vault policy write pki-web-policy /workspace/policies/pki-web-policy.hcl
 vault policy write vault-bot-policy /workspace/policies/vault-bot-policy.hcl
+vault policy write bootstrap-policy /workspace/policies/bootstrap-policy.hcl
 
 mkdir -p /workspace/approle
 vault auth enable approle
 vault write auth/approle/role/vault-bot \
   token_policies=vault-bot-policy \
-  token_ttl=2m \
-  token_max_ttl=5m \
-  secret_id_ttl=2m
+  token_ttl=1h \
+  token_max_ttl=24h \
+  secret_id_ttl=24h
 
-vault read -field=role_id auth/approle/role/vault-bot/role-id > /workspace/approle/role_id
-vault write -f -field=secret_id auth/approle/role/vault-bot/secret-id > /workspace/approle/secret_id
+# Create bootstrap token for nginx-bot to fetch its own credentials
+vault token create -policy=bootstrap-policy -ttl=10m -field=token > /workspace/bootstrap-token.txt
+cat /workspace/bootstrap-token.txt
 ```
 
-Copy the AppRole artifacts back to the host (for the `nginx-bot` volume) and re-enter the shell if desired:
-
-```bash
-exit
-docker cp $(docker compose ps -q shell):/workspace/approle/. .local/bot-approle/
-docker compose exec shell bash
-```
+The `nginx-bot` container will automatically fetch its AppRole credentials from Vault using the bootstrap token when it starts. No manual copying is needed.
 
 ### 4. Demonstrate manual issuance (optional)
 
@@ -121,11 +117,16 @@ jq -r .data.certificate /tmp/manual-cert.json
 
 ### 5. Start/Restart the Nginx + Vault Bot container
 
+First, copy the bootstrap token to the host and set it as an environment variable:
+
 ```bash
-docker compose restart nginx-bot
+exit  # Exit the shell container
+docker cp $(docker compose ps -q shell):/workspace/bootstrap-token.txt .local/
+export VAULT_BOOTSTRAP_TOKEN=$(cat .local/bootstrap-token.txt)
+docker compose up -d nginx-bot
 ```
 
-Watch the bot logs to confirm rotations:
+Watch the bot logs to confirm certificate issuance and rotations:
 
 ```bash
 docker compose logs -f nginx-bot
@@ -179,20 +180,34 @@ Delete `.local/` if you no longer need stored keys/tokens.
 
 ## Troubleshooting
 
-### nginx-bot Container Exits Immediately
+### nginx-bot Container Fails to Start
 
-If the `nginx-bot` container fails to start with "Missing AppRole credentials", this is typically due to:
+The `nginx-bot` container fetches its own AppRole credentials from Vault at startup using a bootstrap token. If it fails to start:
 
-1. **Expired secret_id** (2-minute TTL by design). Regenerate it:
+1. **Bootstrap token expired** (10-minute TTL). Regenerate it:
    ```bash
    export VAULT_TOKEN=$(cat .local/root-token.txt)
-   docker compose exec -e VAULT_TOKEN shell vault write -f -field=secret_id auth/approle/role/vault-bot/secret-id > .local/bot-approle/secret_id
-   docker compose restart nginx-bot
+   export VAULT_BOOTSTRAP_TOKEN=$(docker compose exec -e VAULT_TOKEN shell vault token create -policy=bootstrap-policy -ttl=10m -field=token)
+   docker compose up -d nginx-bot
    ```
 
-2. **Windows Docker Desktop volume mount issue**: On Windows, bind mounts to `.local/bot-approle` may not work reliably. Workaround:
-   - Use WSL2 and run the lab from within WSL
-   - Or manually copy credentials into the container after it starts
+2. **AppRole credentials expired** (24-hour TTL). The container will automatically restart and fetch fresh credentials. Check logs:
+   ```bash
+   docker compose logs nginx-bot --tail 50
+   ```
+
+3. **Vault sealed or unhealthy**. Unseal Vault:
+   ```bash
+   docker compose exec vault vault operator unseal <unseal-key>
+   ```
+
+### Certificate Not Issued
+
+If you see "No Vault certificate has been issued yet" on the web page:
+
+- The container automatically detects the placeholder certificate and forces renewal on first run
+- Check vaultbot logs: `docker compose logs nginx-bot | grep -i certificate`
+- Vaultbot checks every 60 seconds and renews certificates 30 seconds before expiry
 
 ## Useful Commands
 

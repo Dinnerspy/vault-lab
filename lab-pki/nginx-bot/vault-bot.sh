@@ -58,19 +58,44 @@ export VAULT_APP_ROLE_SECRET_ID="$(cat "$SECRET_ID_PATH")"
 echo "[Vault Bot] Starting vaultbot with role_id: ${VAULT_APP_ROLE_ROLE_ID:0:10}..." >&2
 echo "[Vault Bot] Vault address: ${VAULT_ADDR:-http://vault:8200}" >&2
 echo "[Vault Bot] PKI mount: $PKI_MOUNT, role: $PKI_ROLE_NAME, common_name: $PKI_COMMON_NAME" >&2
+echo "[Vault Bot] Running vaultbot in loop (check interval: ${BOT_INTERVAL:-60}s)..." >&2
 
-vaultbot \
-  --vault_addr="${VAULT_ADDR:-http://vault:8200}" \
-  --vault_auth_method=approle \
-  --vault_app_role_mount=approle \
-  --pki_mount="$PKI_MOUNT" \
-  --pki_role_name="$PKI_ROLE_NAME" \
-  --pki_common_name="$PKI_COMMON_NAME" \
-  --pki_cert_path="$PKI_CERT_PATH" \
-  --pki_cachain_path="$PKI_CACHAIN_PATH" \
-  --pki_privkey_path="$PKI_KEY_PATH" \
-  --pki_ttl="$PKI_TTL" \
-  --pki_renew_time="$PKI_RENEW_TIME" \
-  --logfile="$VAULTBOT_LOGFILE" \
-  --renew_hook="$RENEW_HOOK" \
-  --auto_confirm
+# Run vaultbot in a loop since it's not a daemon
+while true; do
+  # Check if we need to force renewal (placeholder cert or missing cert)
+  FORCE_RENEW=""
+  if [[ -f "$PKI_CERT_PATH" ]]; then
+    # Check if it's the placeholder cert
+    if openssl x509 -in "$PKI_CERT_PATH" -noout -subject 2>/dev/null | grep -q "CN=placeholder.local"; then
+      echo "[Vault Bot] Detected placeholder certificate, forcing renewal..." >&2
+      FORCE_RENEW="--pki_force_renew"
+    fi
+  else
+    # No cert exists, force creation
+    echo "[Vault Bot] No certificate found, forcing initial issuance..." >&2
+    FORCE_RENEW="--pki_force_renew"
+  fi
+  
+  if vaultbot \
+    --vault_addr="${VAULT_ADDR:-http://vault:8200}" \
+    --vault_auth_method=approle \
+    --vault_app_role_mount=approle \
+    --pki_mount="$PKI_MOUNT" \
+    --pki_role_name="$PKI_ROLE_NAME" \
+    --pki_common_name="$PKI_COMMON_NAME" \
+    --pki_cert_path="$PKI_CERT_PATH" \
+    --pki_cachain_path="$PKI_CACHAIN_PATH" \
+    --pki_privkey_path="$PKI_KEY_PATH" \
+    --pki_ttl="$PKI_TTL" \
+    --pki_renew_time="$PKI_RENEW_TIME" \
+    --renew_hook="$RENEW_HOOK" \
+    --auto_confirm \
+    $FORCE_RENEW; then
+    # Success - sleep and continue
+    sleep "${BOT_INTERVAL:-60}"
+  else
+    # Failure - likely auth expired. Exit and let container restart to fetch fresh credentials.
+    echo "[Vault Bot] Vaultbot failed (likely auth expired). Exiting to restart with fresh credentials..." >&2
+    exit 1
+  fi
+done

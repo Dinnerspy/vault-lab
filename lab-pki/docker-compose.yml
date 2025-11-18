@@ -33,6 +33,7 @@ services:
     build:
       context: ./nginx-bot
     container_name: lab-pki-nginx-bot
+    restart: unless-stopped
     depends_on:
       vault:
         condition: service_healthy
